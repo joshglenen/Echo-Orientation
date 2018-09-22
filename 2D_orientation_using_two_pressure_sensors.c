@@ -1,30 +1,31 @@
-//------------------------------------Project Codename: How to listen 101---------------------------------------------------//
+
+
+//------------------------------------Project Codename: RobotEars-----------------------------------------------------------//
 //------------------------------------Author: Josh_Glenen_2018--------------------------------------------------------------//
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 //---------------------------------------------------global dynamic and static variables------------------------------------//
 
 //--do not change below-------//
 #define PI 3.14159265
-typedef enum { false, true } bool;
 
-bool utteranceRegistered = false;
-bool leftAmpIsHigher = false;
-double speedOfSound = 343;
-bool leftIsLeading = false;
+int utteranceRegistered = 0;
+int leftAmpIsHigher = 0;
+const double speedOfSound = 343;
+int leftIsLeading = 0;
 double delay = 0;
 //---do not change above-------//
 
 //for this example we are assuming low noise, high snr and a noise floor of 0.1 volts in a 0-5 Vrms signal 
 // thus the signal will never drop below 1 and the signal will be clipped when 5 volts
 //change based on experimental data in the environment of operation
-float uThreshold = 0.5;
-float lThreshold = 0.3;
+const float uThreshold = 0.5;
+const float lThreshold = 0.3;
 
 //measure the distance btn sensors in mm
-double distanceSeparatingSensors = 100;
+const double distanceSeparatingSensors = 100;
 
 //setup 2 ADC inputs for 2 continuous analog non-periodic signals of range 0 to 5 volts
 float leftInput = 1;// setPin(A1, input);
@@ -41,8 +42,8 @@ float motorControl = 1; // setPin(D2, output);
 // for a sampling rate of 80 khz, there will be 4000 samples required to fit the largest non-nill signal 
 //this is demanding for a system and if 1khz is set as the new lowest audible signal, only 80 samples are required which would have a faster response time
 // for this example, we are going to use 4000 and require at least 8 kb of dynamic memory and provide a window of 50ms
-int memRMSWindow = 4000;
-int memRMS = 3;
+const int memRMSWindow = 4000;
+const int memRMS = 3;
 float leftBuffer[4000];
 float rightBuffer[4000];
 float leftRMSBuffer[3];
@@ -59,23 +60,47 @@ int fclk = 8000000;
 //this records the inputs directly as floats between 0 and 5 and stores them in buffers
 void recordData()
 {
+	//wait sampling interval 1/fs
+	//since this interval is 12.5 micro seconds, need to use custom function
+	//tdelay is the amount of clock cycles per sample (100 in this example)
 	int tdelay = 0;
 	double tdelayPrime = 0;
+	tdelayPrime = fclk / fs;
+	tdelay = floor(tdelayPrime);
+	
+	//using a loop will create a delay but will come with an overhead
+	//note that each command will take >=1 cycle provided your MCU contains only one central processor or is single threaded.
+	//A proper overhead estimate will involve converting to assembly and manually counting the process delays.
+	/*
+			mov     eax, DWORD PTR i[rip]
+			movss   xmm0, DWORD PTR rightInput[rip]
+			cdqe
+			movss   DWORD PTR rightBuffer[0+rax*4], xmm0
+			mov     DWORD PTR [rbp-4], 0
+		.L3:
+			cmp     DWORD PTR [rbp-4], 22
+			jg      .L2
+			add     DWORD PTR [rbp-4], 1
+			jmp     .L3
+		.L2:
+	*/
+	//I estimated this to have 5 cycles of overhead with a loop cycle of 4per cycle with an exception o2 for the last cycle.
+	//Caution: flk must be greater than fs. Additionally, observed fs will deviate from programmed fs. Thus this section may require optimization
+	//to find the fs observed, use this eqn: fso = fclk/(overhead+loopLast + floor(loop*tdelay)) = 80808 hz which is an error of 1.01%.
+	int overhead = 5;
+	int loop = 4;
+	int loopLast = 2;
+	tdelay = tdelay - overhead - loopLast;
+	tdelay = floor(tdelay/loop);
+	if (tdelay < 0) tdelay = 0;
+	
+	
+	//Data is ready to record
 	for (int i = 0; i < memRMSWindow; i++)
 	{
 		leftInput = leftBuffer[i];
 		rightInput = rightBuffer[i];
-
-		//wait sampling interval 1/fs
-		//since this interval is 12.5 micro seconds, need to use custom function
-		//tdelay is the amount of clock cycles per sample (100 in this example)
-		//note that each command will take >=1 cycle provided your MCU contains only ONE central processor.
-		//I estimated this to add 7 addition cycles.
-		tdelayPrime = fclk / fs;
-		tdelay = floor(tdelayPrime);
-		tdelay = tdelay - 7;
-		if (tdelay < 0) tdelay = 0;
-		for (int i = 0; i < tdelay; i++)
+		for (int i = 0; i < tdelay;)
 		{
 			i++;
 		}
@@ -108,84 +133,120 @@ void checkThresholds()
 {
 	if (!utteranceRegistered)
 	{
-		if (leftRMSBuffer[memRMS - 1] > uThreshold) utteranceRegistered = true;
+		if (leftRMSBuffer[memRMS - 1] > uThreshold) utteranceRegistered = 1;
 	}
 	else
 	{
-		if (leftRMSBuffer[memRMS - 1] < lThreshold) utteranceRegistered = false;
+		if (leftRMSBuffer[memRMS - 1] < lThreshold) utteranceRegistered = 0;
 	}
 }
 
-//finds (i) if robot needs to turn (ii) which sensor Vrms amplitude is higher (iii) which sensor is leading (iv) what the delay btn them is!
-bool compareLR()
+//a subfunction of compareLR()
+int _isRisingEdge()
 {
+	return ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[1] < leftRMSBuffer[2]));
+}
+
+//a subfunction of compareLR()
+int _isFallingEdge()
+{
+	return ((leftRMSBuffer[0] > leftRMSBuffer[1]) && (leftRMSBuffer[1] > leftRMSBuffer[2]));
+}
+
+//a subfunction of compareLR()
+int _isPeak()
+{
+	return ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[1] > leftRMSBuffer[2]));
+}
+
+//a subfunction of compareLR()
+int _isTrough()
+{
+	return ((leftRMSBuffer[0] > leftRMSBuffer[1]) && (leftRMSBuffer[1] < leftRMSBuffer[2]));
+}
+
+//finds (i) if robot needs to turn (ii) which sensor Vrms amplitude is higher (iii) which sensor is leading (iv) what the delay btn them is!
+int compareLR()
+{
+	//determine the position in time of the signal using Vrms
+	int _isPeak = _isPeak();
+	int _isTrough = _isTrough();
+	int _isFallingEdge = _isFallingEdge();
+	int _isRisingEdge = _isRisingEdge();
+	
 	//assume signal is above the noise floor with a reasonable SNR
-	//I am using a fos of 105% to prevent the motor from constantly running. More precise systems can reduce this down to an ideal 100%.
+	//I am using a fos of 5% to prevent the motor from constantly running. More precise systems can reduce this down to an ideal 100%.
 	float fos = 1.05;
 
-		//Which amplitude is higher?
-		//a simple way to determine if amplitudes are close enough not to need to change position. 
-		//Alternate way is to use sig figs and a simple == check; it would be faster but require testing.
-		if (((leftRMSBuffer[0] < rightRMSBuffer[0] * fos) && (leftRMSBuffer[0] > rightRMSBuffer[0] / fos) || (leftRMSBuffer[0] < rightRMSBuffer[0] / fos) && (leftRMSBuffer[0] > rightRMSBuffer[0] * fos)))
-		{
-			//amplitudes are close enough and we dont need to turn yet
-			return false;
-		}
-		else
-		{
-			if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftAmpIsHigher = true;
-			else leftAmpIsHigher = false;
-		}
-
+	//Which amplitude is higher?
+	//a simple way to determine if amplitudes are close enough not to need to change position. 
+	//Alternate way is to use sig figs and a simple == check; it would be faster but require testing.
+	if (((leftRMSBuffer[0] < rightRMSBuffer[0] * fos) && (leftRMSBuffer[0] > rightRMSBuffer[0] / fos)) || ((rightRMSBuffer[0] < leftRMSBuffer[0] * fos) && (rightRMSBuffer[0] > leftRMSBuffer[0] / fos)))
+	{
+		//amplitudes are close enough and we dont need to turn yet
+		return 0;
+	}
+	else 
+	{
+		if(leftRMSBuffer[0]>rightRMSBuffer[0]) leftAmpIsHigher = 1;
+		else leftAmpIsHigher = 0;
+	}
+	
 	//which signal is leading? 
 	//this is a bit more difficult as there are four cases without using large samples and derivation to determine rise or fall
 	// case 1: averageVrms is falling 
-	if ((leftRMSBuffer[0] > leftRMSBuffer[1]) && (leftRMSBuffer[1] > leftRMSBuffer[2]))
+	if (_isFallingEdge)
 	{
-		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = true;
-		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = false;
+		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 1;
+		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 0;
 		else
 		{
 			delay = 0;
-			return true; //no delay detected
+			return 1; //no delay detected
 		}
 	}
+	
 	//case 2: averageVrms is rising 
-	else if ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[1] < leftRMSBuffer[2]))
+	else if (_isRisingEdge)
 	{
-		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = true;
-		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = false;
+		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 1;
+		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 0;
 		else
 		{
 			delay = 0;
-			return true; //no delay detected
+			return 1; //no delay detected
 		}
 
 	}
+	
 	//case 3: averageVrms is at a peak
-	else if ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[2] < leftRMSBuffer[1]))
+	else if (_isPeak)
 	{
-		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = true;
-		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = false;
+		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 1;
+		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 0;
 		else
 		{
 			delay = 0;
-			return true; //no delay detected
+			return 1; //no delay detected
 		}
 
 	}
+	
 	//case 4: averageVrms is at a trough
-	else
+	else if (_isTrough)
 	{
-		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = true;
-		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = false;
+		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 1;
+		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 0;
 		else
 		{
 			delay = 0;
-			return true; //no delay detected
+			return 1; //no delay detected
 		}
 
 	}
+	
+	//case 5: flat line
+	else return;
 
 	//So, what is our delay?
 	//our smallest delay that we can find is 1/fs
@@ -241,10 +302,10 @@ bool compareLR()
 	}
 
 	k--;
-	if (k > precision + floor(precision*1.1)) return false; //error found
+	if (k > precision + floor(precision*1.1)) return 0; //error found
 	if (k > precision) delay = largestDelayMS; //sound is coming from 90 or -90 degree angle from (+) normal axis
 	else delay = k * smallestDelayMS;
-	return true;
+	return 1;
 }
 
 // now we need to move
@@ -267,7 +328,7 @@ theta = ((-1)^f)(arcsin(ct/x)+k*180)
 double calculateAsmuth()
 {
 	double asmuth = 0;
-	asmuth = pow(-1, leftAmpIsHigher);
+	asmuth = pow(-1, leftIsLeading);
 	double ratio = speedOfSound * delay / (distanceSeparatingSensors / 1000);
 	asmuth = asmuth * asin(ratio) * 180 / PI;
 	return asmuth;
@@ -287,7 +348,7 @@ double generatePWM(double angle)
 //None so far
 
 //------------------------------------------------------------Main--------------------------------------------------------//
-int main()
+int main(int argc, char **argv)
 {
 	while (1)
 	{
@@ -307,7 +368,7 @@ int main()
 		if (utteranceRegistered)
 		{
 			//now we need to get our variables to estimate the 2D origin of the sound
-			bool turn = compareLR();
+			int turn = compareLR();
 			if (turn)
 			{
 				double asmuth = calculateAsmuth();
