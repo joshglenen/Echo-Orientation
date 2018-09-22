@@ -10,11 +10,12 @@
 
 //--do not change below-------//
 #define PI 3.14159265
+typedef enum { false = 0, true = 1 } bool;
 
-int utteranceRegistered = 0;
-int leftAmpIsHigher = 0;
+bool utteranceRegistered = false;
+bool leftAmpIsHigher = false;
 const double speedOfSound = 343;
-int leftIsLeading = 0;
+bool leftIsLeading = false;
 double delay = 0;
 //---do not change above-------//
 
@@ -133,46 +134,46 @@ void checkThresholds()
 {
 	if (!utteranceRegistered)
 	{
-		if (leftRMSBuffer[memRMS - 1] > uThreshold) utteranceRegistered = 1;
+		if (leftRMSBuffer[memRMS - 1] > uThreshold) utteranceRegistered = true;
 	}
 	else
 	{
-		if (leftRMSBuffer[memRMS - 1] < lThreshold) utteranceRegistered = 0;
+		if (leftRMSBuffer[memRMS - 1] < lThreshold) utteranceRegistered = false;
 	}
 }
 
-//a subfunction of compareLR()
-int _isRisingEdge()
+//a subfunction of compareLR()5
+bool isRisingEdge()
 {
 	return ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[1] < leftRMSBuffer[2]));
 }
 
-//a subfunction of compareLR()
-int _isFallingEdge()
+//a subfunction of compareLR()5
+bool isFallingEdge()
 {
 	return ((leftRMSBuffer[0] > leftRMSBuffer[1]) && (leftRMSBuffer[1] > leftRMSBuffer[2]));
 }
 
-//a subfunction of compareLR()
-int _isPeak()
+//a subfunction of compareLR()5
+bool isPeak()
 {
 	return ((leftRMSBuffer[0] < leftRMSBuffer[1]) && (leftRMSBuffer[1] > leftRMSBuffer[2]));
 }
 
-//a subfunction of compareLR()
-int _isTrough()
+//a subfunction of compareLR()5
+bool isTrough()
 {
 	return ((leftRMSBuffer[0] > leftRMSBuffer[1]) && (leftRMSBuffer[1] < leftRMSBuffer[2]));
 }
 
 //finds (i) if robot needs to turn (ii) which sensor Vrms amplitude is higher (iii) which sensor is leading (iv) what the delay btn them is!
-int compareLR()
+bool compareLR()
 {
 	//determine the position in time of the signal using Vrms
-	int _isPeak = _isPeak();
-	int _isTrough = _isTrough();
-	int _isFallingEdge = _isFallingEdge();
-	int _isRisingEdge = _isRisingEdge();
+	bool _isPeak = isPeak();
+	bool _isTrough = isTrough();
+	bool _isFallingEdge = isFallingEdge();
+	bool _isRisingEdge = isRisingEdge();
 	
 	//assume signal is above the noise floor with a reasonable SNR
 	//I am using a fos of 5% to prevent the motor from constantly running. More precise systems can reduce this down to an ideal 100%.
@@ -184,12 +185,7 @@ int compareLR()
 	if (((leftRMSBuffer[0] < rightRMSBuffer[0] * fos) && (leftRMSBuffer[0] > rightRMSBuffer[0] / fos)) || ((rightRMSBuffer[0] < leftRMSBuffer[0] * fos) && (rightRMSBuffer[0] > leftRMSBuffer[0] / fos)))
 	{
 		//amplitudes are close enough and we dont need to turn yet
-		return 0;
-	}
-	else 
-	{
-		if(leftRMSBuffer[0]>rightRMSBuffer[0]) leftAmpIsHigher = 1;
-		else leftAmpIsHigher = 0;
+		return false;
 	}
 	
 	//which signal is leading? 
@@ -197,24 +193,24 @@ int compareLR()
 	// case 1: averageVrms is falling 
 	if (_isFallingEdge)
 	{
-		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 1;
-		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 0;
+		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = true;
+		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = false;
 		else
 		{
 			delay = 0;
-			return 1; //no delay detected
+			return true; //no delay detected
 		}
 	}
 	
 	//case 2: averageVrms is rising 
 	else if (_isRisingEdge)
 	{
-		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 1;
-		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 0;
+		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = true;
+		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = false;
 		else
 		{
 			delay = 0;
-			return 1; //no delay detected
+			return true; //no delay detected
 		}
 
 	}
@@ -222,12 +218,12 @@ int compareLR()
 	//case 3: averageVrms is at a peak
 	else if (_isPeak)
 	{
-		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 1;
-		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 0;
+		if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = true;
+		else if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = false;
 		else
 		{
 			delay = 0;
-			return 1; //no delay detected
+			return true; //no delay detected
 		}
 
 	}
@@ -235,18 +231,18 @@ int compareLR()
 	//case 4: averageVrms is at a trough
 	else if (_isTrough)
 	{
-		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = 1;
-		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = 0;
+		if (leftRMSBuffer[0] < rightRMSBuffer[0]) leftIsLeading = true;
+		else if (leftRMSBuffer[0] > rightRMSBuffer[0]) leftIsLeading = false;
 		else
 		{
 			delay = 0;
-			return 1; //no delay detected
+			return true; //no delay detected
 		}
 
 	}
 	
 	//case 5: flat line
-	else return;
+	else return false;
 
 	//So, what is our delay?
 	//our smallest delay that we can find is 1/fs
@@ -302,10 +298,10 @@ int compareLR()
 	}
 
 	k--;
-	if (k > precision + floor(precision*1.1)) return 0; //error found
+	if (k > precision + floor(precision*1.1)) return false; //error found
 	if (k > precision) delay = largestDelayMS; //sound is coming from 90 or -90 degree angle from (+) normal axis
 	else delay = k * smallestDelayMS;
-	return 1;
+	return true;
 }
 
 // now we need to move
@@ -368,7 +364,7 @@ int main(int argc, char **argv)
 		if (utteranceRegistered)
 		{
 			//now we need to get our variables to estimate the 2D origin of the sound
-			int turn = compareLR();
+			bool turn = compareLR();
 			if (turn)
 			{
 				double asmuth = calculateAsmuth();
