@@ -8,7 +8,7 @@ This way is the easiest since it does not require epirical tables or extra compo
  
  The math: X = distance between microphone speakers assumeing they are inline with the axis of rotation
  t = time delay
- c = speed of light in respective medium
+ c = speed of sound in respective medium
  -> this is undetectable   k = 1 if sound is registered from behind and 0 if from ahead
  f = 1 if left amplitude is higher or 0 if right amplitude is higher
  theta = angle needing to clockwise-rotate with origin normal to axis of microphones with left microphone on the left, etc.
@@ -32,8 +32,6 @@ This way is the easiest since it does not require epirical tables or extra compo
   //todo//
   
   # 3D orientation using five pressure sensors (microphones)
-  This method uses a shperical model with 3 sesnors on the horizontal axis and a sensor on either pole. This is the minimal configuration of sensors for a practical definition. Adding more sensors increases sensitivity. This is an expensive solution for high quality components which is indicates how important directional filters such as the human body are. A proper filter reduces the amount of sensors by at least 60%! This model uses three axis and two rotational angles. The circuit and program are not provided but a simple model is included below.
-  
-  //todo//
+  This method uses a shperical model with 3 sesnors on the horizontal axis and a sensor on either pole. This is the minimal configuration of sensors for a practical definition. Adding more sensors increases sensitivity. This is an expensive solution for high quality components which is indicates how important directional filters such as the human body are. A proper filter reduces the amount of sensors by at least 60%! This model uses three axis and two rotational angles. The circuit and program are not provided.
  
 
