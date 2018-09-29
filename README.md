@@ -21,13 +21,13 @@ This way is the easiest since it does not require epirical tables or extra compo
  
  Another method not used is to take two initial samples, 1 at initial position and another rotated 90 degrees. With these two values, k can be calculated. The robot however will spin more than it needs to at every registered noise which will be distracting. An optional c file is included with the extra methods to apply this method.
  
-# 2D orientation using two microphones and comparators
+# ... using two microphones and comparators
 Since the solution above does not need to reconstruct the input signals for purposes such as harmonic distortion analysis, comparators could replace the more complex ADCs. The This would yield a more responsive system but limit programmatic control.
  
- # 2D orientation using two microphones and a directional filter
+ # ...using two microphones and a directional filter
  This method requires the construction of a filter such as the human ear which causes reflections and distortions in the speaker. These distortions can be detected in the harmonics of the input signal. Using empiracle data and a proper filter, the relationship between distortion and direction could be estimated. This method also applies for 3D space but requires much more data and analysis.
  
-  # 2D orientation using three microphones
+  # ...using three microphones
   This method is cheating but is the most practical. Adding more sensors will increase the sensitivity and allow detection of back and front easily. The math changes based on the number of inputs which should be spatially separated equidistantly for the highest sensitivity. This example uses three sensors, though more could be added. No code is currently included for this method.
   
   The math:
