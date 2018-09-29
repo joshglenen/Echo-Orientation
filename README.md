@@ -22,19 +22,15 @@ This way is the easiest since it does not require epirical tables or extra compo
  Another method not used is to take two initial samples, 1 at initial position and another rotated 90 degrees. With these two values, k can be calculated. This method is less efficient than the assumption method as the motor may spin longer than needed provided k was initially 0. However, this method applies sequential calculation of theta whereas the former only calculates theta at a predefined interval; therefore, this method may be faster overall. An optional c file is included with the extra methods to apply this method.
  
 # ... using two microphones and comparators
-Since the solution above does not need to reconstruct the input signals for purposes such as harmonic distortion analysis, comparators could replace the more complex ADCs. The This would yield a more responsive system but limit programmatic control.
+Since the solution above does not need to reconstruct the input signals for purposes such as harmonic distortion analysis, comparators could replace the more complex ADCs. This would yield a more responsive system but limit programmatic control.
  
  # ...using two microphones and a directional filter
  This method requires the construction of a filter such as the human ear which causes reflections and distortions in the speaker. These distortions can be detected in the harmonics of the input signal. Using empiracle data and a proper filter, the relationship between distortion and direction could be estimated. This method also applies for 3D space but requires much more data and analysis.
  
   # ...using three microphones
-  This method is cheating but is the most practical. Adding more sensors will increase the sensitivity and allow detection of back and front easily. The math changes based on the number of inputs which should be spatially separated equidistantly for the highest sensitivity. This example uses three sensors, though more could be added. No code is currently included for this method.
-  
-  The math:
-  
-  //todo//
+  This method is cheating but is the most practical. Adding more sensors will increase the sensitivity and allow detection of back and front easily. The math changes based on the number of inputs which should be spatially separated equidistantly for the highest sensitivity. This example uses three sensors, though more could be added. 
   
   # 3D orientation using five microphones
-  This method uses a spherical model with 3 sesnors on the horizontal axis and a sensor on either pole. This is the minimal configuration of sensors for a practical definition. Adding more sensors increases sensitivity. This is an expensive solution for high quality components which is indicates how important directional filters such as the human body are. A proper filter reduces the amount of sensors by at least 60%! This model uses three axis and two rotational angles. The circuit and code are not provided for this method.
+  This method uses a spherical model with 3 sesnors on the horizontal axis and a sensor on either pole. This is the minimal configuration of sensors for a practical definition. Adding more sensors increases sensitivity. This is an expensive solution for high quality components which is indicates how important directional filters such as the human body are. A proper filter reduces the amount of sensors by at least 60%! This model uses three axis and two rotational angles. 
  
 
