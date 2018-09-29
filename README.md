@@ -15,11 +15,11 @@ This way is the easiest since it does not require epirical tables or extra compo
  
  theta = ((-1)^f)*(arcsin(c*t/x)+k*180)
  
- Therefore, we estimate that the sound is in front and k = 0; The angle is measured and the robot rotates. Theta is recalculated, if theta is close to 0, the algorythm ends otherwise the robot rotates to that second angle and repeat. The c file requires implementation of your respective microcontroller methods which are indicated within the file. A diagram of the required circuit is illustrated below
+ Therefore, we estimate that the sound is in front and k = 0; The system will continue to monitor the input and if the sound was originally behind the robot, the robot will be oriented 180 degrees from the signal origin. This difference in angle will be detected onthe next theta calculation and the robot will rotate to the true sound origin. This method calculates k using the assumption and correction method. The c file requires implementation of your respective microcontroller methods which are indicated within the file. A diagram of the required circuit is illustrated below
 
 //todo//
  
- Another method not used is to take two initial samples, 1 at initial position and another rotated 90 degrees. With these two values, k can be calculated. The robot however will spin more than it needs to at every registered noise which will be distracting. An optional c file is included with the extra methods to apply this method.
+ Another method not used is to take two initial samples, 1 at initial position and another rotated 90 degrees. With these two values, k can be calculated. This method is less efficient than the assumption method as the motor may spin longer than needed provided k was initially 0. However, this method applies sequential calculation of theta whereas the former only calculates theta at a predefined interval; therefore, this method may be faster overall. An optional c file is included with the extra methods to apply this method.
  
 # ... using two microphones and comparators
 Since the solution above does not need to reconstruct the input signals for purposes such as harmonic distortion analysis, comparators could replace the more complex ADCs. The This would yield a more responsive system but limit programmatic control.
