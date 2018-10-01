@@ -34,7 +34,7 @@ The next step will be to implement a timer method which uses the full precision 
  
 # Other Approaches
 ## Using two microphones and a directional filter
- This method requires the construction of a filter such as the human ear which causes reflections and distortions in the speaker. These distortions can be detected in the harmonics of the input signal. Using empiracle data and a proper filter, the relationship between distortion and direction could be estimated. This method also applies for 3D space but requires much more data and analysis.
+ This method requires the construction of a filter such as the human ear which causes reflections and distortions in the speaker. These distortions can be detected in the harmonics of the input signal. Using empirpcle data and a proper filter, the relationship between distortion and direction could be estimated. This method also applies for 3D space; however, it's well beyond the scope of this project.
  
 ## Determining k using three microphones
-  This method is cheating but is the most practical. Adding more sensors will increase the sensitivity and allow detection of back and front easily. The math changes based on the number of inputs which should be spatially separated equidistantly for the highest sensitivity. 
+  Adding more sensors will both increase the sensitivity and easily allow k detection (depending on SNR). Since the goal of this project was to imitate human ears, this method will not be pursued. This method will be more practical and precise but will also demand a significant incease in power and part costs.
